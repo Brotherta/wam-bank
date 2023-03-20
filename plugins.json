@@ -1,9 +1,10 @@
 [
-  "StonePhaserStereo",
-  "BigMuff",
-  "TS9_OverdriveFaustGenerated",
+  "CompressorGuitarix",
+  "graphicEqualizer",
   "disto_machine/src",
   "GuitarAmpSim60s",
+  "StonePhaserStereo",
+  "TS9_OverdriveFaustGenerated",
   "sweetWah",
   "SmoothDelay",
   "temper",
@@ -21,6 +22,5 @@
   "DualPitchShifter",
   "StereoFreqShifter",
   "WeirdPhaser",
-  "ThruZeroFlanger",
-  "graphicEqualizer"
+  "ThruZeroFlanger"
 ]
