@@ -1,28 +1,20 @@
-import AutomationTrack from "./AutomationTrack.js";
-
 const player = document.querySelector("#player");
 const mount = document.querySelector("#mount");
 
-const main = document.querySelector("main");
 const saveState = document.getElementById("save");
 const restoreState = document.getElementById("restore");
 const deleteState = document.getElementById("delete");
 const inCache = document.getElementById("inCache");
-const automationSelector = document.getElementById("param-select");
-const download = document.getElementById("download");
-const upload = document.getElementById("upload");
-const input = document.getElementById("upload-input");
-const automationAll = document.getElementById("automation-all");
 
 inCache.setAttribute("data", localStorage.getItem("instanceState") != null);
 
 // Safari...
 const AudioContext =
-  window.AudioContext || // Default
-  window.webkitAudioContext || // Safari and old versions of Chrome
-  false;
+    window.AudioContext || // Default
+    window.webkitAudioContext || // Safari and old versions of Chrome
+    false;
 
-const audioContext = new AudioContext({ latencyHint: "playback" });
+const audioContext = new AudioContext();
 const mediaElementSource = audioContext.createMediaElementSource(player);
 
 // Very simple function to connect the plugin audionode to the host
@@ -39,11 +31,12 @@ const mountPlugin = (domNode) => {
 
 (async () => {
   // Init WamEnv
-  const { default: initializeWamHost } = await import("../plugins/utils/sdk/src/initializeWamHost.js");
+  const { default: initializeWamHost } = await import("https://wam-bank.vidalmazuy.fr/plugins/utils/sdk/src/initializeWamHost.js");
   const [hostGroupId] = await initializeWamHost(audioContext);
 
   // Import WAM
-  const { default: WAM } = await import("./src/index.js");
+  const { default: WAM } = await import("https://wam-bank.vidalmazuy.fr/src/index.js");
+  //const { default: WAM } = await import("https://wam-bank.vidalmazuy.fr/plugins/TS9_OverdriveFaustGenerated/index.js");
   // Create a new instance of the plugin
   // You can can optionnally give more options such as the initial state of the plugin
   const instance = await WAM.createInstance(hostGroupId, audioContext);
@@ -63,8 +56,6 @@ const mountPlugin = (domNode) => {
     audioContext.resume(); // audio context must be resumed because browser restrictions
   };
 
-  //State
-
   saveState.addEventListener("click", async () => {
     let state = await instance.audioNode.getState();
     localStorage.setItem("instanceState", JSON.stringify(state));
@@ -83,69 +74,43 @@ const mountPlugin = (domNode) => {
     inCache.setAttribute("data", false);
   });
 
-  download.addEventListener("click", async () => {
-    let state = await instance.audioNode.getState();
-    const blob = new Blob([JSON.stringify(state, undefined, 2)]);
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "PedalBoard-State.json";
-    link.click();
-  });
+  document.querySelector("#toggleGuitarIn").onclick = (event) => {
+    toggleGuitarInput(event)
+  }
 
-  upload.addEventListener("click", () => {
-    input.click();
-  });
+  // live input
+  var guitarPluggedIn = false;
+  var userMedia;
 
-  input.addEventListener("change", (e) => {
-    let files = input.files;
-    if (files.length > 0 && files[0].type == "application/json") {
-      try {
-        var fr = new FileReader();
-        fr.onload = async () => {
-          await instance.audioNode.setState(JSON.parse(fr.result));
-        };
-        fr.readAsText(files[0]);
-      } catch {
-        console.warn("Could not import PedalBoard-State");
-      }
+  var constraints = {
+    audio: {
+      echoCancellation: false,
+      mozNoiseSuppression: false,
+      mozAutoGainControl: false,
+      //deviceId: id ? {exact: id} : undefined
     }
+  };
+  // User input part 
+  navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+    window.stream = stream;
+    userMedia = audioContext.createMediaStreamSource(stream);
   });
 
-  //Automation
+  function toggleGuitarInput(event) {
+    audioContext.resume().then(() => {
+      console.log('Playback resumed successfully');
+    });
+    var button = document.querySelector("#toggleGuitarIn");
 
-  instance.audioNode.addEventListener("wam-info", async () => {
-    window.pluginInfos = await instance.audioNode.getParameterInfo();
-    let keys = Object.keys(window.pluginInfos);
-
-    automationSelector.innerHTML = '<option value="">Add Automation...</option>';
-    for (let key of keys) {
-      let info = window.pluginInfos[key];
-      let option = document.createElement("option");
-      option.value = key;
-      option.innerHTML = `${key} ➤ ${info.minValue} - ${info.maxValue}`;
-      automationSelector.appendChild(option);
+    if (!guitarPluggedIn) {
+      userMedia.connect(instance.audioNode);
+      button.innerHTML = "Guitar input: <span style='color:green;'>ACTIVATED</span>, click to toggle on/off!";
+    } else {
+      userMedia.disconnect(instance.audioNode);
+      button.innerHTML = "Guitar input: <span style='color:red;'>NOT ACTIVATED</span>, click to toggle on/off!";
     }
-
-    let useless = [];
-    for (let track of document.querySelectorAll("automation-track")) {
-      if (window.pluginInfos[track.paramId]?.nodeId != track.param.nodeId) useless.push(track);
-    }
-    useless.forEach((track) => track.remove());
-  });
-
-  automationSelector.addEventListener("input", (e) => {
-    const paramId = e.target.value;
-    const param = window.pluginInfos[paramId];
-    if (param && !param.track) {
-      param.track = true;
-      main.appendChild(new AutomationTrack(paramId, param));
-    }
-  });
-
-  automationAll.addEventListener("click", () => {
-    window.instance.audioNode.clearEvents();
-    for (let track of document.querySelectorAll("automation-track")) {
-      track.scheduleEvents(false);
-    }
-  });
+    guitarPluggedIn = !guitarPluggedIn;
+  }
 })();
+
+ 
