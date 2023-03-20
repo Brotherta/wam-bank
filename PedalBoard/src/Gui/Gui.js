@@ -172,7 +172,7 @@ export default class pedalboardGui extends HTMLElement {
     this.presetsMenu = await this.loadMenu();
 
     var details = document.createElement("details");
-    details.open = true;
+    details.open = false;
     details.id = "collapsePresets";
     var summary = document.createElement("summary");
     summary.innerHTML = "Presets Menu";
@@ -302,7 +302,7 @@ export default class pedalboardGui extends HTMLElement {
    */
   resizeWrapper(wrapper, header, title, cross, gui) {
     const parentScale = this.getBoundingClientRect().width / this.offsetWidth;
-    const scale = (200 / gui.getBoundingClientRect().height) * parentScale;
+    const scale = (250 / gui.getBoundingClientRect().height) * parentScale;
 
     wrapper.style.transformOrigin = "top left";
     wrapper.style.transform = "scale(" + scale + ")";
